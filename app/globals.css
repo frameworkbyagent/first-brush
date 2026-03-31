@@ -405,3 +405,33 @@ button:disabled {
   border-radius: 18px;
   display: block;
 }
+
+
+.hero-avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 18px 0 10px;
+}
+
+.hero-avatar-frame {
+  width: 220px;
+  height: 220px;
+  padding: 8px;
+  border-radius: 36px;
+  background: linear-gradient(135deg, #fde68a, #f9a8d4, #93c5fd);
+  box-shadow: 0 16px 40px rgba(245, 158, 11, 0.24);
+}
+
+.hero-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 28px;
+  display: block;
+}
+
+.hero-name {
+  margin: 0 0 8px;
+  font-size: 36px;
+  font-weight: 800;
+}

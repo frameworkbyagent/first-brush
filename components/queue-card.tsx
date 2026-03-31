@@ -147,11 +147,18 @@ export function QueueCard() {
     return getNextChild(state.today.first);
   }, [state]);
 
+  const activeChild = useMemo(() => {
+    if (!state) return null;
+    return state.today.first === 'Давид'
+      ? { name: 'Давид' as const, imageSrc: '/avatars/david.jpg' }
+      : { name: 'Анна' as const, imageSrc: '/avatars/anna.jpg' };
+  }, [state]);
+
   if (loading && !state) {
     return <main className="page-shell"><section className="hero-card"><p>Загружаю очередь…</p></section></main>;
   }
 
-  if (!state) {
+  if (!state || !activeChild) {
     return <main className="page-shell"><section className="hero-card"><p>Не удалось открыть данные.</p></section></main>;
   }
 
@@ -167,7 +174,21 @@ export function QueueCard() {
 
       <section className="hero-card hero-kids">
         <p className="eyebrow">Сегодня первым чистит</p>
-        <h1>{state.today.first}</h1>
+
+        <div className="hero-avatar-wrap">
+          <div className="hero-avatar-frame">
+            <Image
+              src={activeChild.imageSrc}
+              alt={activeChild.name}
+              width={220}
+              height={220}
+              className="hero-avatar-image"
+              priority
+            />
+          </div>
+        </div>
+
+        <p className="hero-name">{activeChild.name}</p>
         <p className="subtle">{formatDateRu(state.today.date)}</p>
         <p className={`today-status ${state.today.completed ? 'done' : 'pending'}`}>
           {state.today.completed ? 'Сегодня всё готово ✅' : 'Пора идти чистить 🪥'}
