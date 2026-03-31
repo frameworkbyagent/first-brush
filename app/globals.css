@@ -1,13 +1,13 @@
 :root {
   color-scheme: light;
   --bg: #fff8f1;
-  --card: rgba(255, 255, 255, 0.88);
+  --card: rgba(255, 255, 255, 0.9);
   --text: #1f2937;
   --muted: #6b7280;
   --accent: #f59e0b;
   --accent-strong: #ea580c;
   --accent-soft: #fef3c7;
-  --soft-blue: #e0f2fe;
+  --soft-blue: #dbeafe;
   --soft-pink: #fce7f3;
   --border: rgba(245, 158, 11, 0.18);
   --success: #15803d;
@@ -46,7 +46,8 @@ input {
 .hero-card,
 .info-card,
 .parent-card,
-.history-card {
+.history-card,
+.child-card {
   backdrop-filter: blur(18px);
   background: var(--card);
   border: 1px solid var(--border);
@@ -82,9 +83,9 @@ input {
   text-align: center;
 }
 
-.hero-card h1 {
+.hero-kids h1 {
   margin: 10px 0;
-  font-size: 56px;
+  font-size: 60px;
   line-height: 1;
 }
 
@@ -101,6 +102,7 @@ input {
   color: var(--muted);
 }
 
+.kids-grid,
 .actions,
 .parent-actions,
 .pin-box {
@@ -110,12 +112,66 @@ input {
   margin-top: 24px;
 }
 
+.child-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  text-align: left;
+}
+
+.child-card.blue {
+  background: linear-gradient(135deg, rgba(219,234,254,0.92), rgba(255,255,255,0.96));
+}
+
+.child-card.pink {
+  background: linear-gradient(135deg, rgba(252,231,243,0.92), rgba(255,255,255,0.96));
+}
+
+.child-card.active {
+  border: 2px solid rgba(245, 158, 11, 0.55);
+  transform: scale(1.01);
+}
+
+.child-avatar {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.72);
+  font-size: 34px;
+  flex-shrink: 0;
+}
+
+.child-name {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.child-subtitle {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.child-badge {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .primary-button,
 .secondary-button,
 .ghost-button,
 .pin-input {
   width: 100%;
-  min-height: 52px;
+  min-height: 54px;
   border-radius: 18px;
   padding: 14px 18px;
 }
@@ -138,6 +194,11 @@ input {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: white;
   font-weight: 800;
+}
+
+.primary-button.giant {
+  min-height: 64px;
+  font-size: 22px;
 }
 
 .secondary-button {
@@ -257,6 +318,7 @@ button:disabled {
 .today-status {
   margin: 14px 0 0;
   font-weight: 700;
+  font-size: 18px;
 }
 
 .today-status.done {
@@ -284,36 +346,6 @@ button:disabled {
   color: #c2410c;
 }
 
-.error-text {
-  margin-top: 12px;
-  color: var(--danger);
-}
-
-@media (max-width: 560px) {
-  .hero-card h1 {
-    font-size: 42px;
-  }
-
-  .top-banner,
-  .info-grid,
-  .section-header,
-  .history-row {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .info-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .badge {
-    align-self: flex-start;
-  }
-}
-
-
 .change-pin-card {
   margin-top: 18px;
   border-top: 1px solid #f5efe5;
@@ -324,7 +356,38 @@ button:disabled {
   margin-top: 12px;
 }
 
+.error-text {
+  margin-top: 12px;
+  color: var(--danger);
+}
+
 .success-text {
   margin-top: 12px;
   color: var(--success);
+}
+
+@media (max-width: 640px) {
+  .hero-kids h1 {
+    font-size: 46px;
+  }
+
+  .top-banner,
+  .section-header,
+  .history-row,
+  .child-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .child-badge {
+    margin-left: 0;
+  }
+
+  .primary-button.giant {
+    font-size: 20px;
+  }
 }

@@ -5,6 +5,27 @@ import { QueueState, formatDateRu, getNextChild } from '@/lib/queue';
 
 type BusyAction = 'complete' | 'toggle' | 'reset' | 'unlock' | 'changePin' | null;
 
+type ChildCardProps = {
+  name: 'Давид' | 'Анна';
+  active: boolean;
+  subtitle: string;
+  emoji: string;
+  tint: 'blue' | 'pink';
+};
+
+function ChildCard({ name, active, subtitle, emoji, tint }: ChildCardProps) {
+  return (
+    <article className={`child-card ${tint} ${active ? 'active' : ''}`}>
+      <div className="child-avatar" aria-hidden="true">{emoji}</div>
+      <div>
+        <p className="child-name">{name}</p>
+        <p className="child-subtitle">{active ? subtitle : 'Ждёт свою очередь'}</p>
+      </div>
+      {active ? <span className="child-badge">Сегодня первый</span> : null}
+    </article>
+  );
+}
+
 export function QueueCard() {
   const [state, setState] = useState<QueueState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +79,8 @@ export function QueueCard() {
       const data = (await response.json()) as QueueState;
       setState(data);
       if (action === 'reset') setSuccess('День сброшен к плановой очереди.');
+      if (action === 'toggle') setSuccess('Очередь на сегодня обновлена.');
+      if (action === 'complete') setSuccess('Готово. Чистка на сегодня отмечена.');
     } catch {
       setError('Действие не выполнилось. Попробуй ещё раз.');
     } finally {
@@ -130,44 +153,61 @@ export function QueueCard() {
   }
 
   return (
-    <main className="page-shell">
+    <main className="page-shell kid-mode">
       <section className="top-banner">
         <div>
           <p className="eyebrow">First Brush</p>
-          <h2>Спокойная вечерняя очередь</h2>
+          <h2>Кто сегодня идёт первым?</h2>
         </div>
-        <span className="badge">Давид ↔ Анна</span>
+        <span className="badge">Вечерняя очередь</span>
       </section>
 
-      <section className="hero-card">
+      <section className="hero-card hero-kids">
         <p className="eyebrow">Сегодня первым чистит</p>
         <h1>{state.today.first}</h1>
         <p className="subtle">{formatDateRu(state.today.date)}</p>
         <p className={`today-status ${state.today.completed ? 'done' : 'pending'}`}>
-          {state.today.completed ? 'На сегодня уже отмечено' : 'Сегодня ещё не отмечено'}
+          {state.today.completed ? 'Сегодня всё готово ✅' : 'Пора идти чистить 🪥'}
         </p>
+
+        <div className="kids-grid">
+          <ChildCard
+            name="Давид"
+            emoji="🦖"
+            tint="blue"
+            active={state.today.first === 'Давид'}
+            subtitle="Сегодня начинает Давид"
+          />
+          <ChildCard
+            name="Анна"
+            emoji="🦄"
+            tint="pink"
+            active={state.today.first === 'Анна'}
+            subtitle="Сегодня начинает Анна"
+          />
+        </div>
 
         <div className="actions">
           <button
             type="button"
-            className="primary-button"
+            className="primary-button giant"
             onClick={() => runAction('complete')}
             disabled={busyAction !== null || state.today.completed}
           >
-            {state.today.completed ? 'Чистка уже отмечена' : busyAction === 'complete' ? 'Сохраняю…' : 'Отметить, что почистили'}
+            {state.today.completed ? 'На сегодня всё' : busyAction === 'complete' ? 'Сохраняю…' : 'Мы почистили зубы'}
           </button>
         </div>
       </section>
 
-      <section className="info-grid">
+      <section className="info-grid kid-stats">
         <article className="info-card warm">
           <p className="eyebrow">Завтра первым</p>
           <strong>{tomorrowFirst}</strong>
         </article>
 
         <article className="info-card soft">
-          <p className="eyebrow">Сегодняшний статус</p>
-          <strong>{state.today.completed ? 'День закрыт' : 'Ждёт отметки'}</strong>
+          <p className="eyebrow">Статус вечера</p>
+          <strong>{state.today.completed ? 'Можно отдыхать' : 'Ждёт отметки'}</strong>
         </article>
       </section>
 
@@ -256,7 +296,7 @@ export function QueueCard() {
       <section className="history-card">
         <div className="section-header">
           <h2>История</h2>
-          <span>Сохраняется между рестартами</span>
+          <span>Последние дни</span>
         </div>
 
         <div className="history-list">
@@ -267,7 +307,7 @@ export function QueueCard() {
                 <p className="history-name">Первым был {entry.first}</p>
               </div>
               <span className={entry.completed ? 'status done' : 'status pending'}>
-                {entry.completed ? 'Отмечено' : 'План'}
+                {entry.completed ? 'Готово' : 'План'}
               </span>
             </div>
           ))}
