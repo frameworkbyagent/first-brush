@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChildName, QueueState, getNextChild } from '@/lib/queue';
 
 type BusyAction = 'complete' | 'toggle' | 'reset' | 'unlock' | 'changePin' | null;
+type Stage = 'loading' | 'first' | 'second' | 'done';
+type TransitionStage = 'idle' | 'exiting' | 'entering';
 
 type HeroChild = {
   name: ChildName;
@@ -28,7 +30,7 @@ export function QueueCard() {
   const [pinHint, setPinHint] = useState('PIN из 4 цифр');
   const [currentPin, setCurrentPin] = useState('');
   const [nextPin, setNextPin] = useState('');
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [transitionStage, setTransitionStage] = useState<TransitionStage>('idle');
 
   async function refresh() {
     setLoading(true);
@@ -59,6 +61,15 @@ export function QueueCard() {
     refresh();
   }, []);
 
+  async function animateStateChange(nextState: QueueState) {
+    setTransitionStage('exiting');
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    setState(nextState);
+    setTransitionStage('entering');
+    await new Promise((resolve) => setTimeout(resolve, 420));
+    setTransitionStage('idle');
+  }
+
   async function runAction(action: 'complete' | 'toggle' | 'reset') {
     setBusyAction(action);
     setError(null);
@@ -71,11 +82,7 @@ export function QueueCard() {
       const data = (await response.json()) as QueueState;
 
       if (action === 'complete') {
-        setIsAnimating(true);
-        setTimeout(() => {
-          setState(data);
-          setIsAnimating(false);
-        }, 500);
+        await animateStateChange(data);
       } else {
         setState(data);
       }
@@ -84,6 +91,7 @@ export function QueueCard() {
       if (action === 'toggle') setSuccess('Порядок на сегодня обновлён.');
     } catch {
       setError('Действие не выполнилось. Попробуй ещё раз.');
+      setTransitionStage('idle');
     } finally {
       setBusyAction(null);
     }
@@ -140,12 +148,12 @@ export function QueueCard() {
     }
   }
 
-  const stage = useMemo(() => {
-    if (!state) return 'loading' as const;
+  const stage = useMemo<Stage>(() => {
+    if (!state) return 'loading';
     const p = state.today.progress;
-    if (p.completed) return 'done' as const;
-    if (p.firstDone) return 'second' as const;
-    return 'first' as const;
+    if (p.completed) return 'done';
+    if (p.firstDone) return 'second';
+    return 'first';
   }, [state]);
 
   const activeChild = useMemo(() => {
@@ -184,11 +192,11 @@ export function QueueCard() {
         <span className="badge">По очереди</span>
       </section>
 
-      <section className={`hero-card hero-kids ${isAnimating ? 'hero-switch' : ''}`}>
+      <section className={`hero-card hero-kids stage-${stage} transition-${transitionStage}`}>
         {stage !== 'done' && activeChild ? (
           <>
             <div className="hero-avatar-wrap solo">
-              <div className="hero-avatar-frame giant-frame">
+              <div className="hero-avatar-frame giant-frame pulse-frame">
                 <Image
                   src={activeChild.imageSrc}
                   alt={activeChild.name}
@@ -205,24 +213,21 @@ export function QueueCard() {
             <div className="actions">
               <button
                 type="button"
-                className="primary-button giant"
+                className="primary-button giant ready-button"
                 onClick={() => runAction('complete')}
-                disabled={busyAction !== null || isAnimating}
+                disabled={busyAction !== null || transitionStage !== 'idle'}
               >
-                {busyAction === 'complete'
-                  ? 'Готово…'
-                  : stage === 'first'
-                    ? 'Готово'
-                    : 'Готово'}
+                <span className="ready-icon">✅</span>
+                <span>Готово</span>
               </button>
             </div>
           </>
         ) : (
-          <div className="celebration-screen">
+          <div className="celebration-screen burst-in">
             <div className="celebration-stars" aria-hidden="true">✨ 🎉 ✨</div>
             <div className="celebration-avatars">
-              {celebrationChild.map((child) => (
-                <div key={child.name} className="mini-hero-avatar">
+              {celebrationChild.map((child, index) => (
+                <div key={child.name} className={`mini-hero-avatar bounce-${index + 1}`}>
                   <Image src={child.imageSrc} alt={child.name} width={120} height={120} className="hero-avatar-image" />
                 </div>
               ))}

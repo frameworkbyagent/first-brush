@@ -84,3 +84,66 @@ button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
   .celebration-avatars { gap: 10px; }
   .mini-hero-avatar { width: 96px; height: 96px; }
 }
+
+
+.transition-exiting {
+  animation: heroFadeOut 0.26s ease forwards;
+}
+
+.transition-entering {
+  animation: heroFadeIn 0.42s ease forwards;
+}
+
+@keyframes heroFadeOut {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-18px) scale(0.96); }
+}
+
+@keyframes heroFadeIn {
+  0% { opacity: 0; transform: translateY(26px) scale(0.94); }
+  60% { opacity: 1; transform: translateY(-6px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.pulse-frame {
+  animation: pulseGlow 2.2s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 16px 40px rgba(245, 158, 11, 0.24); transform: scale(1); }
+  50% { box-shadow: 0 20px 54px rgba(249, 115, 22, 0.32); transform: scale(1.015); }
+}
+
+.ready-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.ready-icon {
+  font-size: 28px;
+}
+
+.burst-in {
+  animation: burstIn 0.7s cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes burstIn {
+  0% { opacity: 0; transform: scale(0.82); }
+  70% { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.bounce-1 {
+  animation: bounceAvatar 1.2s ease-in-out infinite;
+}
+
+.bounce-2 {
+  animation: bounceAvatar 1.2s ease-in-out infinite 0.18s;
+}
+
+@keyframes bounceAvatar {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
