@@ -147,3 +147,38 @@ button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
 }
+
+
+.confetti-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti {
+  position: absolute;
+  top: -18px;
+  width: 12px;
+  height: 18px;
+  border-radius: 4px;
+  animation: confettiDrop 2.4s linear infinite;
+}
+
+.confetti-1 { background: #f59e0b; }
+.confetti-2 { background: #ec4899; }
+.confetti-3 { background: #3b82f6; }
+.confetti-4 { background: #10b981; }
+.confetti-5 { background: #8b5cf6; }
+.confetti-6 { background: #ef4444; }
+
+@keyframes confettiDrop {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(420px) rotate(360deg); opacity: 0; }
+}
+
+.celebration-screen {
+  position: relative;
+  overflow: hidden;
+}

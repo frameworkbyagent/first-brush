@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChildName, QueueState, getNextChild } from '@/lib/queue';
 
 type BusyAction = 'complete' | 'toggle' | 'reset' | 'unlock' | 'changePin' | null;
@@ -31,6 +31,7 @@ export function QueueCard() {
   const [currentPin, setCurrentPin] = useState('');
   const [nextPin, setNextPin] = useState('');
   const [transitionStage, setTransitionStage] = useState<TransitionStage>('idle');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -60,6 +61,21 @@ export function QueueCard() {
   useEffect(() => {
     refresh();
   }, []);
+
+  const stage = useMemo<Stage>(() => {
+    if (!state) return 'loading';
+    const p = state.today.progress;
+    if (p.completed) return 'done';
+    if (p.firstDone) return 'second';
+    return 'first';
+  }, [state]);
+
+  useEffect(() => {
+    if (stage === 'done' && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {});
+    }
+  }, [stage]);
 
   async function animateStateChange(nextState: QueueState) {
     setTransitionStage('exiting');
@@ -148,14 +164,6 @@ export function QueueCard() {
     }
   }
 
-  const stage = useMemo<Stage>(() => {
-    if (!state) return 'loading';
-    const p = state.today.progress;
-    if (p.completed) return 'done';
-    if (p.firstDone) return 'second';
-    return 'first';
-  }, [state]);
-
   const activeChild = useMemo(() => {
     if (!state) return null;
     const p = state.today.progress;
@@ -184,6 +192,10 @@ export function QueueCard() {
 
   return (
     <main className="page-shell kid-mode">
+      <audio ref={audioRef} preload="auto">
+        <source src="data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTAAAAAAAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA" type="audio/wav" />
+      </audio>
+
       <section className="top-banner">
         <div>
           <p className="eyebrow">First Brush</p>
@@ -224,6 +236,11 @@ export function QueueCard() {
           </>
         ) : (
           <div className="celebration-screen burst-in">
+            <div className="confetti-layer" aria-hidden="true">
+              {Array.from({ length: 18 }).map((_, index) => (
+                <span key={index} className={`confetti confetti-${(index % 6) + 1}`} style={{ left: `${(index * 5.5) % 100}%`, animationDelay: `${index * 0.08}s` }} />
+              ))}
+            </div>
             <div className="celebration-stars" aria-hidden="true">✨ 🎉 ✨</div>
             <div className="celebration-avatars">
               {celebrationChild.map((child, index) => (
