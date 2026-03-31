@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { QueueState, formatDateRu, getNextChild } from '@/lib/queue';
 
@@ -9,14 +10,16 @@ type ChildCardProps = {
   name: 'Давид' | 'Анна';
   active: boolean;
   subtitle: string;
-  emoji: string;
+  imageSrc: string;
   tint: 'blue' | 'pink';
 };
 
-function ChildCard({ name, active, subtitle, emoji, tint }: ChildCardProps) {
+function ChildCard({ name, active, subtitle, imageSrc, tint }: ChildCardProps) {
   return (
     <article className={`child-card ${tint} ${active ? 'active' : ''}`}>
-      <div className="child-avatar" aria-hidden="true">{emoji}</div>
+      <div className="child-avatar image-avatar">
+        <Image src={imageSrc} alt={name} width={72} height={72} className="avatar-image" />
+      </div>
       <div>
         <p className="child-name">{name}</p>
         <p className="child-subtitle">{active ? subtitle : 'Ждёт свою очередь'}</p>
@@ -173,14 +176,14 @@ export function QueueCard() {
         <div className="kids-grid">
           <ChildCard
             name="Давид"
-            emoji="🦖"
+            imageSrc="/avatars/david.jpg"
             tint="blue"
             active={state.today.first === 'Давид'}
             subtitle="Сегодня начинает Давид"
           />
           <ChildCard
             name="Анна"
-            emoji="🦄"
+            imageSrc="/avatars/anna.jpg"
             tint="pink"
             active={state.today.first === 'Анна'}
             subtitle="Сегодня начинает Анна"

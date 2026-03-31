@@ -391,3 +391,17 @@ button:disabled {
     font-size: 20px;
   }
 }
+
+
+.image-avatar {
+  overflow: hidden;
+  padding: 0;
+}
+
+.avatar-image {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 18px;
+  display: block;
+}
