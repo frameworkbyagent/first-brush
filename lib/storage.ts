@@ -53,6 +53,19 @@ function rolloverIfNeeded(state: QueueState): QueueState {
   };
 }
 
+async function readPinValue() {
+  await ensureDataDir();
+
+  try {
+    const raw = await fs.readFile(PIN_FILE, 'utf8');
+    const parsed = JSON.parse(raw) as { pin?: string };
+    return parsed.pin ?? DEFAULT_PIN;
+  } catch {
+    await writeJson(PIN_FILE, { pin: DEFAULT_PIN });
+    return DEFAULT_PIN;
+  }
+}
+
 export async function readState() {
   await ensureDataDir();
 
@@ -114,28 +127,25 @@ export async function resetToday() {
 }
 
 export async function verifyPin(pin: string) {
-  await ensureDataDir();
+  const actualPin = await readPinValue();
+  return actualPin === pin;
+}
 
-  try {
-    const raw = await fs.readFile(PIN_FILE, 'utf8');
-    const parsed = JSON.parse(raw) as { pin?: string };
-    return (parsed.pin ?? DEFAULT_PIN) === pin;
-  } catch {
-    await writeJson(PIN_FILE, { pin: DEFAULT_PIN });
-    return DEFAULT_PIN === pin;
+export async function changePin(currentPin: string, nextPin: string) {
+  const actualPin = await readPinValue();
+  if (actualPin !== currentPin) {
+    return { ok: false as const, reason: 'CURRENT_PIN_INVALID' };
   }
+
+  if (!/^\d{4,6}$/.test(nextPin)) {
+    return { ok: false as const, reason: 'NEXT_PIN_INVALID' };
+  }
+
+  await writeJson(PIN_FILE, { pin: nextPin });
+  return { ok: true as const };
 }
 
 export async function getPinHint() {
-  await ensureDataDir();
-
-  try {
-    const raw = await fs.readFile(PIN_FILE, 'utf8');
-    const parsed = JSON.parse(raw) as { pin?: string };
-    const pin = parsed.pin ?? DEFAULT_PIN;
-    return `PIN из ${pin.length} цифр`;
-  } catch {
-    await writeJson(PIN_FILE, { pin: DEFAULT_PIN });
-    return `PIN из ${DEFAULT_PIN.length} цифр`;
-  }
+  const pin = await readPinValue();
+  return `PIN из ${pin.length} цифр`;
 }

@@ -312,3 +312,19 @@ button:disabled {
     align-self: flex-start;
   }
 }
+
+
+.change-pin-card {
+  margin-top: 18px;
+  border-top: 1px solid #f5efe5;
+  padding-top: 18px;
+}
+
+.pin-box.compact {
+  margin-top: 12px;
+}
+
+.success-text {
+  margin-top: 12px;
+  color: var(--success);
+}

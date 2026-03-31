@@ -3,16 +3,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { QueueState, formatDateRu, getNextChild } from '@/lib/queue';
 
-type BusyAction = 'complete' | 'toggle' | 'reset' | 'unlock' | null;
+type BusyAction = 'complete' | 'toggle' | 'reset' | 'unlock' | 'changePin' | null;
 
 export function QueueCard() {
   const [state, setState] = useState<QueueState | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isParentUnlocked, setIsParentUnlocked] = useState(false);
   const [pin, setPin] = useState('');
   const [pinHint, setPinHint] = useState('PIN из 4 цифр');
+  const [currentPin, setCurrentPin] = useState('');
+  const [nextPin, setNextPin] = useState('');
 
   async function refresh() {
     setLoading(true);
@@ -46,6 +49,7 @@ export function QueueCard() {
   async function runAction(action: 'complete' | 'toggle' | 'reset') {
     setBusyAction(action);
     setError(null);
+    setSuccess(null);
 
     try {
       const endpoint = action === 'complete' ? '/api/complete' : action === 'toggle' ? '/api/toggle' : '/api/reset';
@@ -53,6 +57,7 @@ export function QueueCard() {
       if (!response.ok) throw new Error('ACTION_FAILED');
       const data = (await response.json()) as QueueState;
       setState(data);
+      if (action === 'reset') setSuccess('День сброшен к плановой очереди.');
     } catch {
       setError('Действие не выполнилось. Попробуй ещё раз.');
     } finally {
@@ -63,6 +68,7 @@ export function QueueCard() {
   async function unlockParentMode() {
     setBusyAction('unlock');
     setError(null);
+    setSuccess(null);
 
     try {
       const response = await fetch('/api/unlock', {
@@ -74,8 +80,37 @@ export function QueueCard() {
       if (!response.ok) throw new Error('PIN_FAILED');
       setIsParentUnlocked(true);
       setPin('');
+      setSuccess('Родительский режим открыт.');
     } catch {
       setError('PIN не подошёл.');
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleChangePin() {
+    setBusyAction('changePin');
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch('/api/change-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPin, nextPin }),
+      });
+
+      if (!response.ok) throw new Error('CHANGE_PIN_FAILED');
+      setCurrentPin('');
+      setNextPin('');
+      setSuccess('PIN обновлён.');
+      const hintResponse = await fetch('/api/pin', { cache: 'no-store' });
+      if (hintResponse.ok) {
+        const pinData = (await hintResponse.json()) as { hint?: string };
+        setPinHint(pinData.hint ?? 'PIN из 4 цифр');
+      }
+    } catch {
+      setError('Не удалось сменить PIN. Проверь текущий код и новый формат.');
     } finally {
       setBusyAction(null);
     }
@@ -162,27 +197,60 @@ export function QueueCard() {
             </button>
           </div>
         ) : (
-          <div className="parent-actions">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => runAction('toggle')}
-              disabled={busyAction !== null}
-            >
-              {busyAction === 'toggle' ? 'Меняю…' : 'Поменять очередь на сегодня'}
-            </button>
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => runAction('reset')}
-              disabled={busyAction !== null}
-            >
-              {busyAction === 'reset' ? 'Сбрасываю…' : 'Сбросить день к плану'}
-            </button>
-          </div>
+          <>
+            <div className="parent-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => runAction('toggle')}
+                disabled={busyAction !== null}
+              >
+                {busyAction === 'toggle' ? 'Меняю…' : 'Поменять очередь на сегодня'}
+              </button>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => runAction('reset')}
+                disabled={busyAction !== null}
+              >
+                {busyAction === 'reset' ? 'Сбрасываю…' : 'Сбросить день к плану'}
+              </button>
+            </div>
+
+            <div className="change-pin-card">
+              <p className="eyebrow">Сменить PIN</p>
+              <div className="pin-box compact">
+                <input
+                  className="pin-input"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="Текущий PIN"
+                  value={currentPin}
+                  onChange={(event) => setCurrentPin(event.target.value.replace(/\D/g, ''))}
+                />
+                <input
+                  className="pin-input"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="Новый PIN"
+                  value={nextPin}
+                  onChange={(event) => setNextPin(event.target.value.replace(/\D/g, ''))}
+                />
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={handleChangePin}
+                  disabled={busyAction !== null || currentPin.length < 4 || nextPin.length < 4}
+                >
+                  {busyAction === 'changePin' ? 'Сохраняю PIN…' : 'Сменить PIN'}
+                </button>
+              </div>
+            </div>
+          </>
         )}
 
         {error ? <p className="error-text">{error}</p> : null}
+        {success ? <p className="success-text">{success}</p> : null}
       </section>
 
       <section className="history-card">
