@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChildName, QueueState, getNextChild } from '@/lib/queue';
 
 type BusyAction = 'complete' | 'toggle' | 'reset' | 'unlock' | 'changePin' | null;
@@ -31,7 +31,6 @@ export function QueueCard() {
   const [currentPin, setCurrentPin] = useState('');
   const [nextPin, setNextPin] = useState('');
   const [transitionStage, setTransitionStage] = useState<TransitionStage>('idle');
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -70,12 +69,6 @@ export function QueueCard() {
     return 'first';
   }, [state]);
 
-  useEffect(() => {
-    if (stage === 'done' && audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {});
-    }
-  }, [stage]);
 
   async function animateStateChange(nextState: QueueState) {
     setTransitionStage('exiting');
@@ -192,10 +185,6 @@ export function QueueCard() {
 
   return (
     <main className="page-shell kid-mode">
-      <audio ref={audioRef} preload="auto">
-        <source src="data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTAAAAAAAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA" type="audio/wav" />
-      </audio>
-
       <section className="top-banner">
         <div>
           <p className="eyebrow">First Brush</p>
