@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { completeToday } from '@/lib/storage';
+import { completeStep } from '@/lib/storage';
 
 export async function POST() {
-  const state = await completeToday();
+  const state = await completeStep();
   return NextResponse.json(state);
 }

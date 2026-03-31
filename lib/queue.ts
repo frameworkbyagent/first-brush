@@ -1,8 +1,11 @@
 export type ChildName = 'Давид' | 'Анна';
+export type StepStatus = 'pending' | 'done';
 
-export type QueueHistoryEntry = {
-  date: string;
+export type DayProgress = {
   first: ChildName;
+  second: ChildName;
+  firstDone: boolean;
+  secondDone: boolean;
   completed: boolean;
   completedAt?: string;
 };
@@ -10,11 +13,8 @@ export type QueueHistoryEntry = {
 export type QueueState = {
   today: {
     date: string;
-    first: ChildName;
-    completed: boolean;
-    completedAt?: string;
+    progress: DayProgress;
   };
-  history: QueueHistoryEntry[];
 };
 
 export const CHILDREN: ChildName[] = ['Давид', 'Анна'];
@@ -67,6 +67,10 @@ export function getDefaultFirstForDateKey(dateKey: string): ChildName {
   return getFirstChildForDate(getDateFromKey(dateKey));
 }
 
+export function getNextChild(child: ChildName): ChildName {
+  return child === 'Давид' ? 'Анна' : 'Давид';
+}
+
 export function formatDateRu(dateKey: string) {
   return new Intl.DateTimeFormat('ru-RU', {
     timeZone: 'Europe/Minsk',
@@ -76,32 +80,24 @@ export function formatDateRu(dateKey: string) {
   }).format(getDateFromKey(dateKey));
 }
 
-export function getNextChild(child: ChildName): ChildName {
-  return child === 'Давид' ? 'Анна' : 'Давид';
+export function buildProgress(first: ChildName): DayProgress {
+  return {
+    first,
+    second: getNextChild(first),
+    firstDone: false,
+    secondDone: false,
+    completed: false,
+  };
 }
 
-export function buildInitialState(days = 7): QueueState {
+export function buildInitialState(): QueueState {
   const todayKey = getTodayKey();
-  const history: QueueHistoryEntry[] = [];
-
-  for (let index = 0; index < days; index += 1) {
-    const date = getDateFromKey(todayKey);
-    date.setUTCDate(date.getUTCDate() - index);
-    const dateKey = getTodayKey(date);
-
-    history.push({
-      date: dateKey,
-      first: getDefaultFirstForDateKey(dateKey),
-      completed: index !== 0,
-    });
-  }
+  const first = getDefaultFirstForDateKey(todayKey);
 
   return {
     today: {
       date: todayKey,
-      first: getDefaultFirstForDateKey(todayKey),
-      completed: false,
+      progress: buildProgress(first),
     },
-    history,
   };
 }

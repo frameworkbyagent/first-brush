@@ -2,31 +2,19 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import { QueueState, formatDateRu, getNextChild } from '@/lib/queue';
+import { ChildName, QueueState, getNextChild } from '@/lib/queue';
 
 type BusyAction = 'complete' | 'toggle' | 'reset' | 'unlock' | 'changePin' | null;
 
-type ChildCardProps = {
-  name: 'Давид' | 'Анна';
-  active: boolean;
-  subtitle: string;
+type HeroChild = {
+  name: ChildName;
   imageSrc: string;
-  tint: 'blue' | 'pink';
 };
 
-function ChildCard({ name, active, subtitle, imageSrc, tint }: ChildCardProps) {
-  return (
-    <article className={`child-card ${tint} ${active ? 'active' : ''}`}>
-      <div className="child-avatar image-avatar">
-        <Image src={imageSrc} alt={name} width={72} height={72} className="avatar-image" />
-      </div>
-      <div>
-        <p className="child-name">{name}</p>
-        <p className="child-subtitle">{active ? subtitle : 'Ждёт свою очередь'}</p>
-      </div>
-      {active ? <span className="child-badge">Сегодня первый</span> : null}
-    </article>
-  );
+function getAvatar(name: ChildName): HeroChild {
+  return name === 'Давид'
+    ? { name, imageSrc: '/avatars/david.jpg' }
+    : { name, imageSrc: '/avatars/anna.jpg' };
 }
 
 export function QueueCard() {
@@ -40,6 +28,7 @@ export function QueueCard() {
   const [pinHint, setPinHint] = useState('PIN из 4 цифр');
   const [currentPin, setCurrentPin] = useState('');
   const [nextPin, setNextPin] = useState('');
+  const [isAnimating, setIsAnimating] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -80,10 +69,19 @@ export function QueueCard() {
       const response = await fetch(endpoint, { method: 'POST' });
       if (!response.ok) throw new Error('ACTION_FAILED');
       const data = (await response.json()) as QueueState;
-      setState(data);
-      if (action === 'reset') setSuccess('День сброшен к плановой очереди.');
-      if (action === 'toggle') setSuccess('Очередь на сегодня обновлена.');
-      if (action === 'complete') setSuccess('Готово. Чистка на сегодня отмечена.');
+
+      if (action === 'complete') {
+        setIsAnimating(true);
+        setTimeout(() => {
+          setState(data);
+          setIsAnimating(false);
+        }, 500);
+      } else {
+        setState(data);
+      }
+
+      if (action === 'reset') setSuccess('День сброшен к плану.');
+      if (action === 'toggle') setSuccess('Порядок на сегодня обновлён.');
     } catch {
       setError('Действие не выполнилось. Попробуй ещё раз.');
     } finally {
@@ -142,23 +140,37 @@ export function QueueCard() {
     }
   }
 
-  const tomorrowFirst = useMemo(() => {
-    if (!state) return null;
-    return getNextChild(state.today.first);
+  const stage = useMemo(() => {
+    if (!state) return 'loading' as const;
+    const p = state.today.progress;
+    if (p.completed) return 'done' as const;
+    if (p.firstDone) return 'second' as const;
+    return 'first' as const;
   }, [state]);
 
   const activeChild = useMemo(() => {
     if (!state) return null;
-    return state.today.first === 'Давид'
-      ? { name: 'Давид' as const, imageSrc: '/avatars/david.jpg' }
-      : { name: 'Анна' as const, imageSrc: '/avatars/anna.jpg' };
+    const p = state.today.progress;
+    if (p.completed) return null;
+    return getAvatar(p.firstDone ? p.second : p.first);
+  }, [state]);
+
+  const celebrationChild = useMemo(() => {
+    if (!state) return [] as HeroChild[];
+    const p = state.today.progress;
+    return [getAvatar(p.first), getAvatar(p.second)];
+  }, [state]);
+
+  const nextUp = useMemo(() => {
+    if (!state) return null;
+    return getNextChild(state.today.progress.first);
   }, [state]);
 
   if (loading && !state) {
-    return <main className="page-shell"><section className="hero-card"><p>Загружаю очередь…</p></section></main>;
+    return <main className="page-shell"><section className="hero-card"><p>Загружаю…</p></section></main>;
   }
 
-  if (!state || !activeChild) {
+  if (!state) {
     return <main className="page-shell"><section className="hero-card"><p>Не удалось открыть данные.</p></section></main>;
   }
 
@@ -167,71 +179,75 @@ export function QueueCard() {
       <section className="top-banner">
         <div>
           <p className="eyebrow">First Brush</p>
-          <h2>Кто сегодня идёт первым?</h2>
+          <h2>Вечерняя чистка</h2>
         </div>
-        <span className="badge">Вечерняя очередь</span>
+        <span className="badge">По очереди</span>
       </section>
 
-      <section className="hero-card hero-kids">
-        <p className="eyebrow">Сегодня первым чистит</p>
+      <section className={`hero-card hero-kids ${isAnimating ? 'hero-switch' : ''}`}>
+        {stage !== 'done' && activeChild ? (
+          <>
+            <div className="hero-avatar-wrap solo">
+              <div className="hero-avatar-frame giant-frame">
+                <Image
+                  src={activeChild.imageSrc}
+                  alt={activeChild.name}
+                  width={280}
+                  height={280}
+                  className="hero-avatar-image"
+                  priority
+                />
+              </div>
+            </div>
 
-        <div className="hero-avatar-wrap">
-          <div className="hero-avatar-frame">
-            <Image
-              src={activeChild.imageSrc}
-              alt={activeChild.name}
-              width={220}
-              height={220}
-              className="hero-avatar-image"
-              priority
-            />
+            <p className="hero-name">{activeChild.name}</p>
+
+            <div className="actions">
+              <button
+                type="button"
+                className="primary-button giant"
+                onClick={() => runAction('complete')}
+                disabled={busyAction !== null || isAnimating}
+              >
+                {busyAction === 'complete'
+                  ? 'Готово…'
+                  : stage === 'first'
+                    ? 'Готово'
+                    : 'Готово'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="celebration-screen">
+            <div className="celebration-stars" aria-hidden="true">✨ 🎉 ✨</div>
+            <div className="celebration-avatars">
+              {celebrationChild.map((child) => (
+                <div key={child.name} className="mini-hero-avatar">
+                  <Image src={child.imageSrc} alt={child.name} width={120} height={120} className="hero-avatar-image" />
+                </div>
+              ))}
+            </div>
+            <h1 className="celebration-title">Все почистили зубы!</h1>
+            <p className="celebration-subtitle">На сегодня всё готово ✅</p>
           </div>
-        </div>
-
-        <p className="hero-name">{activeChild.name}</p>
-        <p className="subtle">{formatDateRu(state.today.date)}</p>
-        <p className={`today-status ${state.today.completed ? 'done' : 'pending'}`}>
-          {state.today.completed ? 'Сегодня всё готово ✅' : 'Пора идти чистить 🪥'}
-        </p>
-
-        <div className="kids-grid">
-          <ChildCard
-            name="Давид"
-            imageSrc="/avatars/david.jpg"
-            tint="blue"
-            active={state.today.first === 'Давид'}
-            subtitle="Сегодня начинает Давид"
-          />
-          <ChildCard
-            name="Анна"
-            imageSrc="/avatars/anna.jpg"
-            tint="pink"
-            active={state.today.first === 'Анна'}
-            subtitle="Сегодня начинает Анна"
-          />
-        </div>
-
-        <div className="actions">
-          <button
-            type="button"
-            className="primary-button giant"
-            onClick={() => runAction('complete')}
-            disabled={busyAction !== null || state.today.completed}
-          >
-            {state.today.completed ? 'На сегодня всё' : busyAction === 'complete' ? 'Сохраняю…' : 'Мы почистили зубы'}
-          </button>
-        </div>
+        )}
       </section>
 
-      <section className="info-grid kid-stats">
+      <section className="info-grid kid-stats compact-info">
         <article className="info-card warm">
-          <p className="eyebrow">Завтра первым</p>
-          <strong>{tomorrowFirst}</strong>
+          <p className="eyebrow">Сейчас</p>
+          <strong>
+            {stage === 'done'
+              ? 'Все готовы'
+              : stage === 'first'
+                ? 'Первый ребёнок'
+                : 'Второй ребёнок'}
+          </strong>
         </article>
 
         <article className="info-card soft">
-          <p className="eyebrow">Статус вечера</p>
-          <strong>{state.today.completed ? 'Можно отдыхать' : 'Ждёт отметки'}</strong>
+          <p className="eyebrow">Завтра первым</p>
+          <strong>{nextUp}</strong>
         </article>
       </section>
 
@@ -269,7 +285,7 @@ export function QueueCard() {
                 onClick={() => runAction('toggle')}
                 disabled={busyAction !== null}
               >
-                {busyAction === 'toggle' ? 'Меняю…' : 'Поменять очередь на сегодня'}
+                {busyAction === 'toggle' ? 'Меняю…' : 'Поменять порядок на сегодня'}
               </button>
               <button
                 type="button"
@@ -277,7 +293,7 @@ export function QueueCard() {
                 onClick={() => runAction('reset')}
                 disabled={busyAction !== null}
               >
-                {busyAction === 'reset' ? 'Сбрасываю…' : 'Сбросить день к плану'}
+                {busyAction === 'reset' ? 'Сбрасываю…' : 'Сбросить день'}
               </button>
             </div>
 
@@ -315,27 +331,6 @@ export function QueueCard() {
 
         {error ? <p className="error-text">{error}</p> : null}
         {success ? <p className="success-text">{success}</p> : null}
-      </section>
-
-      <section className="history-card">
-        <div className="section-header">
-          <h2>История</h2>
-          <span>Последние дни</span>
-        </div>
-
-        <div className="history-list">
-          {state.history.map((entry) => (
-            <div key={entry.date} className="history-row">
-              <div>
-                <p className="history-date">{formatDateRu(entry.date)}</p>
-                <p className="history-name">Первым был {entry.first}</p>
-              </div>
-              <span className={entry.completed ? 'status done' : 'status pending'}>
-                {entry.completed ? 'Готово' : 'План'}
-              </span>
-            </div>
-          ))}
-        </div>
       </section>
     </main>
   );

@@ -1,11 +1,10 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { QueueHistoryEntry, QueueState, buildInitialState, getDefaultFirstForDateKey, getNextChild, getTodayKey } from '@/lib/queue';
+import { QueueState, buildInitialState, buildProgress, getDefaultFirstForDateKey, getTodayKey, getNextChild } from '@/lib/queue';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
 const PIN_FILE = path.join(DATA_DIR, 'pin.json');
-const HISTORY_LIMIT = 30;
 const DEFAULT_PIN = process.env.PARENT_PIN ?? '1234';
 
 async function ensureDataDir() {
@@ -21,35 +20,22 @@ async function writeState(state: QueueState) {
   await writeJson(STATE_FILE, state);
 }
 
-function mergeTodayIntoHistory(state: QueueState) {
-  const filtered = state.history.filter((entry) => entry.date !== state.today.date);
-  const updatedHistory: QueueHistoryEntry[] = [state.today, ...filtered]
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, HISTORY_LIMIT);
-
-  return {
-    ...state,
-    history: updatedHistory,
-  };
-}
-
 function rolloverIfNeeded(state: QueueState): QueueState {
   const todayKey = getTodayKey();
   if (state.today.date === todayKey) {
-    return mergeTodayIntoHistory(state);
+    return state;
   }
 
-  const merged = mergeTodayIntoHistory(state);
-  const nextDefault = getDefaultFirstForDateKey(todayKey);
-  const previousFirst = merged.today.first;
+  const defaultFirst = getDefaultFirstForDateKey(todayKey);
+  const nextFirst = state.today.progress.completed
+    ? getNextChild(state.today.progress.first)
+    : defaultFirst;
 
   return {
     today: {
       date: todayKey,
-      first: merged.today.completed ? getNextChild(previousFirst) : nextDefault,
-      completed: false,
+      progress: buildProgress(nextFirst),
     },
-    history: merged.history,
   };
 }
 
@@ -82,16 +68,29 @@ export async function readState() {
   }
 }
 
-export async function completeToday() {
+export async function completeStep() {
   const state = await readState();
-  const nextState: QueueState = mergeTodayIntoHistory({
-    ...state,
-    today: {
-      ...state.today,
+  const progress = state.today.progress;
+
+  let nextProgress = progress;
+
+  if (!progress.firstDone) {
+    nextProgress = { ...progress, firstDone: true };
+  } else if (!progress.secondDone) {
+    nextProgress = {
+      ...progress,
+      secondDone: true,
       completed: true,
       completedAt: new Date().toISOString(),
+    };
+  }
+
+  const nextState: QueueState = {
+    today: {
+      ...state.today,
+      progress: nextProgress,
     },
-  });
+  };
 
   await writeState(nextState);
   return nextState;
@@ -99,13 +98,20 @@ export async function completeToday() {
 
 export async function toggleTodayFirst() {
   const state = await readState();
-  const nextState: QueueState = mergeTodayIntoHistory({
-    ...state,
+  const current = state.today.progress;
+  const nextFirst = current.second;
+
+  const nextState: QueueState = {
     today: {
       ...state.today,
-      first: getNextChild(state.today.first),
+      progress: {
+        ...buildProgress(nextFirst),
+        firstDone: false,
+        secondDone: false,
+        completed: false,
+      },
     },
-  });
+  };
 
   await writeState(nextState);
   return nextState;
@@ -113,14 +119,13 @@ export async function toggleTodayFirst() {
 
 export async function resetToday() {
   const state = await readState();
-  const nextState: QueueState = mergeTodayIntoHistory({
-    ...state,
+  const defaultFirst = getDefaultFirstForDateKey(state.today.date);
+  const nextState: QueueState = {
     today: {
-      date: state.today.date,
-      first: getDefaultFirstForDateKey(state.today.date),
-      completed: false,
+      ...state.today,
+      progress: buildProgress(defaultFirst),
     },
-  });
+  };
 
   await writeState(nextState);
   return nextState;
