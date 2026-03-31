@@ -1,0 +1,9 @@
+services:
+  first-brush:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: first-brush-app
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
